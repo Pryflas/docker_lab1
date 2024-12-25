@@ -1,23 +1,28 @@
-# Используем легковесный базовый образ Python
 FROM python:3.11-alpine
 
-# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Устанавливаем зависимости
-COPY requirements.txt /app/
+RUN apk add --no-cache \
+musl-dev \
+gcc \
+python3-dev
+
+COPY requirements.txt .
+
 RUN pip install --no-cache-dir -r requirements.txt
+
+FROM python:3.11-alpine
+
+WORKDIR /app
 
 RUN apk add --no-cache 
 
-# Копируем все файлы приложения
+COPY --from=0 /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+
 COPY . /app/
+RUN rm -rf /root/.cache /tmp/* 
 
-RUN rm -rf /root/.cache
+RUN adduser -D myuser
+USER myuser
 
-# Создаем непривилегированного пользователя
-RUN adduser -D appuser
-USER appuser
-
-# Выполняем миграции и запускаем сервер
-CMD ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
